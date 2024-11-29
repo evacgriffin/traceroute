@@ -162,9 +162,56 @@ class IcmpHelperLibrary:
             self.__packHeader()                 # Header is rebuilt to include new checksum value
 
         def __validateIcmpReplyPacketWithOriginalPingData(self, icmpReplyPacket):
-            # Hint: Work through comparing each value and identify if this is a valid response.
-            icmpReplyPacket.setIsValidResponse(True)
-            pass
+            # Step 1: Confirm received sequence number is same as sent sequence number
+            replySequenceNumber = icmpReplyPacket.getIcmpSequenceNumber()
+            print(f"Received reply sequence number: {replySequenceNumber}")
+            sentSequenceNumber = self.getPacketSequenceNumber()
+            print(f"Sent sequence number: {sentSequenceNumber}")
+
+            if replySequenceNumber == sentSequenceNumber:
+                print("The sent and received sequence numbers match!")
+                icmpReplyPacket.setIsValidSequenceNumber(True)
+            else:
+                print("The received sequence number does not match what was sent!")
+                icmpReplyPacket.setIsValidSequenceNumber(False)
+
+            # Step 2: Confirm received packet identifier is same as sent packet identifier
+            replyPacketIdentifier = icmpReplyPacket.getIcmpPacketIdentifier()
+            print(f"Received packet identifier: {replyPacketIdentifier}")
+            sentPacketIdentifier = self.getPacketIdentifier()
+            print(f"Sent packet identifier: {sentPacketIdentifier}")
+
+            if replyPacketIdentifier == sentPacketIdentifier:
+                print("The sent and received packet identifiers match!")
+                icmpReplyPacket.setIsValidPacketIdentifier(True)
+            else:
+                print("The received packet identifier does not match what was sent!")
+                icmpReplyPacket.setIsValidPacketIdentifier(False)
+
+            # Step 3: Confirm received raw data is same as sent raw data
+            replyRawData = icmpReplyPacket.getIcmpRawData()
+            print(f"Received raw data: {replyRawData}")
+            sentRawData = self.getDataRaw()
+            print(f"Sent raw data: {sentRawData}")
+
+            if replyRawData == sentRawData:
+                print("The sent and received raw data matches!")
+                icmpReplyPacket.setIsValidRawData(True)
+            else:
+                print("The received raw data does not match what was sent!")
+                icmpReplyPacket.setIsValidRawData(False)
+
+            # If all received items are valid, mark the overall response as valid
+            if (icmpReplyPacket.isValidSequenceNumber() and 
+                    icmpReplyPacket.isValidPacketIdentifier() and 
+                        icmpReplyPacket.isValidRawData()):
+                icmpReplyPacket.setIsValidResponse(True)
+                print(f"All received items are valid, so the reply packet is valid.")
+            else:
+                icmpReplyPacket.setIsValidResponse(False)
+                print("This is not a valid reply packet.")
+
+            return
 
         # ############################################################################################################ #
         # IcmpPacket Class Public Functions                                                                            #
@@ -270,6 +317,11 @@ class IcmpHelperLibrary:
         # ############################################################################################################ #
         __recvPacket = b''
         __isValidResponse = False
+        __isValidSequenceNumber = False
+        __isValidPacketIdentifier = False
+        __isValidRawData = False
+
+        # TODO: Create debug messages that show the expected and actual values along with the comparison result
 
         # ############################################################################################################ #
         # IcmpPacket_EchoReply Constructors                                                                            #
@@ -304,7 +356,7 @@ class IcmpHelperLibrary:
             # Method 2
             return self.__unpackByFormatAndPosition("H", 22)
 
-        def getIcmpIdentifier(self):
+        def getIcmpPacketIdentifier(self):
             # Method 1
             # bytes = struct.calcsize("H")        # Format code H is 2 bytes
             # return struct.unpack("!H", self.__recvPacket[24:24 + bytes])[0]
@@ -325,18 +377,36 @@ class IcmpHelperLibrary:
             return self.__unpackByFormatAndPosition("d", 28)   # Used to track overall round trip time
                                                                # time.time() creates a 64 bit value of 8 bytes
 
-        def getIcmpData(self):
+        def getIcmpRawData(self):
             # This accounts for bytes 36 to the end of the packet.
             return self.__recvPacket[36:].decode('utf-8')
 
         def isValidResponse(self):
             return self.__isValidResponse
 
+        def isValidSequenceNumber(self):
+            return self.__isValidSequenceNumber
+
+        def isValidPacketIdentifier(self):
+            return self.__isValidPacketIdentifier
+
+        def isValidRawData(self):
+            return self.__isValidRawData
+
         # ############################################################################################################ #
         # IcmpPacket_EchoReply Setters                                                                                 #
         # ############################################################################################################ #
         def setIsValidResponse(self, booleanValue):
             self.__isValidResponse = booleanValue
+
+        def setIsValidSequenceNumber(self, booleanValue):
+            self.__isValidSequenceNumber = booleanValue
+
+        def setIsValidPacketIdentifier(self, booleanValue):
+            self.__isValidPacketIdentifier = booleanValue
+
+        def setIsValidRawData(self, booleanValue):
+            self.__isValidRawData = booleanValue
 
         # ############################################################################################################ #
         # IcmpPacket_EchoReply Private Functions                                                                       #
@@ -349,6 +419,13 @@ class IcmpHelperLibrary:
         # IcmpPacket_EchoReply Public Functions                                                                        #
         # ############################################################################################################ #
         def printResultToConsole(self, ttl, timeReceived, addr):
+
+            # TODO: Identify if the echo reponse is valid and report the error info details
+            # Report min, max, and avg RTTs at the end of all pings from the client
+            # Also, calculate the packet loss rate in % and create a human readable output
+
+            # Parse the ICMP response error codes -> create a data structure to hold the error types and codes
+
             bytes = struct.calcsize("d")
             timeSent = struct.unpack("d", self.__recvPacket[28:28 + bytes])[0]
             print("  TTL=%d    RTT=%.0f ms    Type=%d    Code=%d        Identifier=%d    Sequence Number=%d    %s" %
@@ -357,7 +434,7 @@ class IcmpHelperLibrary:
                       (timeReceived - timeSent) * 1000,
                       self.getIcmpType(),
                       self.getIcmpCode(),
-                      self.getIcmpIdentifier(),
+                      self.getIcmpPacketIdentifier(),
                       self.getIcmpSequenceNumber(),
                       addr[0]
                   )
@@ -406,7 +483,7 @@ class IcmpHelperLibrary:
 
     def __sendIcmpTraceRoute(self, host):
         print("sendIcmpTraceRoute Started...") if self.__DEBUG_IcmpHelperLibrary else 0
-        # Build code for trace route here
+        # TODO: Build code for trace route here
 
     # ################################################################################################################ #
     # IcmpHelperLibrary Public Functions                                                                               #
