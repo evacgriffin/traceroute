@@ -16,6 +16,21 @@ class IcmpHelperLibrary:
     """
     This class represents the library for the ICMP Helper.
     """
+    # Class scope variables, applies to both ICMP packet and echo
+    ICMPTypesAndCodes = {
+        0: "Echo Reply",
+        3: "Destination Unreachable",
+        5: "Redirect",
+        7: "Unassigned",
+        8: "Echo",
+        9: "Router Advertisement",
+        10: "Router Selection",
+        11: "Time Exceeded",
+        12: "Parameter Problem",
+        13: "Timestamp",
+        14: "Timestamp Reply",  
+    }
+
     class IcmpPacket:
         """
         This class represents an ICMP Packet.
@@ -164,41 +179,35 @@ class IcmpHelperLibrary:
         def __validateIcmpReplyPacketWithOriginalPingData(self, icmpReplyPacket):
             # Step 1: Confirm received sequence number is same as sent sequence number
             replySequenceNumber = icmpReplyPacket.getIcmpSequenceNumber()
-            print(f"Received reply sequence number: {replySequenceNumber}")
             sentSequenceNumber = self.getPacketSequenceNumber()
-            print(f"Sent sequence number: {sentSequenceNumber}")
 
             if replySequenceNumber == sentSequenceNumber:
-                print("The sent and received sequence numbers match!")
+                print(f"The sent and received sequence numbers match! Expected value: {sentSequenceNumber} | Received value: {replySequenceNumber}")
                 icmpReplyPacket.setIsValidSequenceNumber(True)
             else:
-                print("The received sequence number does not match what was sent!")
+                print(f"Invalid sequence number received! Expected value: {sentSequenceNumber} | Received value: {replySequenceNumber}")
                 icmpReplyPacket.setIsValidSequenceNumber(False)
 
             # Step 2: Confirm received packet identifier is same as sent packet identifier
             replyPacketIdentifier = icmpReplyPacket.getIcmpPacketIdentifier()
-            print(f"Received packet identifier: {replyPacketIdentifier}")
             sentPacketIdentifier = self.getPacketIdentifier()
-            print(f"Sent packet identifier: {sentPacketIdentifier}")
 
             if replyPacketIdentifier == sentPacketIdentifier:
-                print("The sent and received packet identifiers match!")
+                print(f"The sent and received packet identifiers match! Expected value: {sentPacketIdentifier} | Received value: {replyPacketIdentifier}")
                 icmpReplyPacket.setIsValidPacketIdentifier(True)
             else:
-                print("The received packet identifier does not match what was sent!")
+                print(f"Invalid packet identifier received! Expected value: {sentPacketIdentifier} | Received value: {replyPacketIdentifier}")
                 icmpReplyPacket.setIsValidPacketIdentifier(False)
 
             # Step 3: Confirm received raw data is same as sent raw data
             replyRawData = icmpReplyPacket.getIcmpRawData()
-            print(f"Received raw data: {replyRawData}")
             sentRawData = self.getDataRaw()
-            print(f"Sent raw data: {sentRawData}")
 
             if replyRawData == sentRawData:
-                print("The sent and received raw data matches!")
+                print(f"The sent and received raw data matches! Expected value: {sentRawData} | Received value: {replyRawData}")
                 icmpReplyPacket.setIsValidRawData(True)
             else:
-                print("The received raw data does not match what was sent!")
+                print(f"Invalid raw data received! Expected value: {sentRawData} | Received value: {replyRawData}")
                 icmpReplyPacket.setIsValidRawData(False)
 
             # If all received items are valid, mark the overall response as valid
@@ -206,10 +215,10 @@ class IcmpHelperLibrary:
                     icmpReplyPacket.isValidPacketIdentifier() and 
                         icmpReplyPacket.isValidRawData()):
                 icmpReplyPacket.setIsValidResponse(True)
-                print(f"All received items are valid, so the reply packet is valid.")
+                print(f"Result: All received items are valid, so the reply packet is valid.")
             else:
                 icmpReplyPacket.setIsValidResponse(False)
-                print("This is not a valid reply packet.")
+                print("Result: This is not a valid reply packet.")
 
             return
 
@@ -321,8 +330,6 @@ class IcmpHelperLibrary:
         __isValidPacketIdentifier = False
         __isValidRawData = False
 
-        # TODO: Create debug messages that show the expected and actual values along with the comparison result
-
         # ############################################################################################################ #
         # IcmpPacket_EchoReply Constructors                                                                            #
         # ############################################################################################################ #
@@ -419,12 +426,6 @@ class IcmpHelperLibrary:
         # IcmpPacket_EchoReply Public Functions                                                                        #
         # ############################################################################################################ #
         def printResultToConsole(self, ttl, timeReceived, addr):
-
-            # TODO: Identify if the echo reponse is valid and report the error info details
-            # Report min, max, and avg RTTs at the end of all pings from the client
-            # Also, calculate the packet loss rate in % and create a human readable output
-
-            # Parse the ICMP response error codes -> create a data structure to hold the error types and codes
 
             bytes = struct.calcsize("d")
             timeSent = struct.unpack("d", self.__recvPacket[28:28 + bytes])[0]
