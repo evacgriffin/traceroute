@@ -42,6 +42,9 @@ class IcmpHelperLibrary:
         def getIcmpTarget(self):
             return self.__icmpTarget
 
+        def getDestinationIpAddress(self):
+            return self.__destinationIpAddress
+
         def getDataRaw(self):
             return self.__dataRaw
 
@@ -200,10 +203,10 @@ class IcmpHelperLibrary:
                     icmpReplyPacket.isValidPacketIdentifier() and 
                         icmpReplyPacket.isValidRawData()):
                 icmpReplyPacket.setIsValidResponse(True)
-                print(f"Result: All received items are valid, so the reply packet is valid.")
+                print(f"Result: All received items are valid, so the reply packet is valid.\n\n")
             else:
                 icmpReplyPacket.setIsValidResponse(False)
-                print("Result: This is not a valid reply packet.")
+                print("Result: This is not a valid reply packet.\n\n")
 
             return
 
@@ -478,6 +481,8 @@ class IcmpHelperLibrary:
         packetsReceived = [0]
         errorResponsePackets = [0]
         pingRTTs = []
+        hostName = ""
+        hostIP = ""
 
         # Total number of packets to send
         numPacketsSend = 4
@@ -494,6 +499,8 @@ class IcmpHelperLibrary:
 
             icmpPacket.buildPacket_echoRequest(packetIdentifier, packetSequenceNumber)  # Build ICMP for IP payload
             icmpPacket.setIcmpTarget(host)
+            hostName = icmpPacket.getIcmpTarget()
+            hostIP = icmpPacket.getDestinationIpAddress()
             icmpPacket.sendEchoRequest(packetsReceived, errorResponsePackets, pingRTTs)  # Build IP
 
             icmpPacket.printIcmpPacketHeader_hex() if self.__DEBUG_IcmpHelperLibrary else 0
@@ -517,7 +524,7 @@ class IcmpHelperLibrary:
         averageRtt = sum/len(pingRTTs)
 
         # Print the result
-        print(f"Ping to {host}:")
+        print(f"Ping to {hostName} [{hostIP}]:")
         print(f"Packets Sent: {numPacketsSend} | Packets Received: {packetsReceived[0]} | Lost Packets: {format(lostPacketsPercent, ".0f")}%")
         print(f"Min RTT: {format(minRtt, ".0f")}ms | Max RTT: {format(maxRtt, ".0f")}ms | Average RTT: {format(averageRtt, ".0f")}ms")
 
