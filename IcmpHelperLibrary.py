@@ -299,13 +299,25 @@ class IcmpHelperLibrary:
                     # Fetch the ICMP type and code from the received packet
                     icmpType, icmpCode = recvPacket[20:22]
 
+                    # Data Structure holding ICMP Code Fields and their Descriptions
+                    codeDescriptions = {
+                        3: {0: "Net Unreachable", 1: "Host Unreachable", 2: "Protocol Unreachable", 3: "Port Unreachable", 4: "Fragmentation Needed and Don't Fragment was Set",
+                            5: "Source Route Failed", 6: "Destination Network Unknown", 7: "Destination Host Unknown", 8: "Source Host Isolated",
+                            9: "Communication with Destination Network is Administratively Prohibited", 10: "Communication with Destination Host is Administratively Prohibited",
+                            11: "Destination Network Unreachable for Type of Service", 12: "Destination Host Unreachable for Type of Service",
+                            13: "Communication Administratively Prohibited", 14: "Host Precedence Violation", 15: "Precedence cutoff in effect"},
+                        11: {0: "Time to Live exceeded in Transit", 1: "Fragment Reassembly Time Exceeded"}
+                    }
+
                     if icmpType == 11:                          # Time Exceeded
-                        print("  TTL=%d    RTT=%.0f ms    Type=%d    Code=%d    %s" %
+                        description = codeDescriptions[icmpType][icmpCode]
+                        print("  TTL=%d    RTT=%.0f ms    Type=%d    Code=%d    (%s)    %s" %
                                 (
                                     self.getTtl(),
                                     (timeReceived - pingStartTime) * 1000,
                                     icmpType,
                                     icmpCode,
+                                    description,
                                     addr[0]
                                 )
                               )
@@ -313,12 +325,14 @@ class IcmpHelperLibrary:
                         return None
 
                     elif icmpType == 3:                         # Destination Unreachable
-                        print("  TTL=%d    RTT=%.0f ms    Type=%d    Code=%d    %s" %
+                        description = codeDescriptions[icmpType][icmpCode]
+                        print("  TTL=%d    RTT=%.0f ms    Type=%d    Code=%d    (%s)    %s" %
                                   (
                                       self.getTtl(),
                                       (timeReceived - pingStartTime) * 1000,
                                       icmpType,
                                       icmpCode,
+                                      description,
                                       addr[0]
                                   )
                               )
@@ -564,13 +578,13 @@ class IcmpHelperLibrary:
     #                                                                                                                  #
     #                                                                                                                  #
     # ################################################################################################################ #
-    def __sendIcmpEchoRequest(self, host, ttl):
+    def __sendIcmpEchoRequest(self, host, ttl, numPackets):
         print("sendIcmpEchoRequest Started...") if self.__DEBUG_IcmpHelperLibrary else 0
 
         # List to keep track of all received packets
         echoPackets = []
 
-        for i in range(4):
+        for i in range(numPackets):
             # Build packet
             icmpPacket = IcmpHelperLibrary.IcmpPacket()
 
@@ -612,11 +626,11 @@ class IcmpHelperLibrary:
                     minRtt = packetRtt
                 averageRtt += echoPacket.getRtt()  # Add packet's rtt to the total sum
 
-            averageRtt /= 4
-            packetLossPercent = len(echoPackets)/4 * 100
+            averageRtt /= numPackets
+            packetLossPercent = 100 - (len(echoPackets)/numPackets * 100)
             address = echoPackets[0].getIcmpOriginAddress()
 
-            print(f"TTL = {ttl} | Min RTT = {minRtt:0,.0f}ms | Max RTT = {maxRtt:0,.0f}ms | Avg RTT = {averageRtt:0,.0f}ms | Packet Loss = {packetLossPercent}% Address = {address}")
+            print(f"TTL = {ttl} | Min RTT = {minRtt:0,.0f}ms | Max RTT = {maxRtt:0,.0f}ms | Avg RTT = {averageRtt:0,.0f}ms | Packet Loss = {packetLossPercent:0,.0f}% | {address}")
 
         return address
 
@@ -627,10 +641,11 @@ class IcmpHelperLibrary:
         hostIP = gethostbyname(host)
 
         print(f"Tracing route to {host} at [{hostIP}]:")
-        # Build code for trace route here
+        # Run traceroute for TTL = 1 to TTL = 50, send 3 packets per ping
         for i in range(1, 51):
-            reachedAddress = self.__sendIcmpEchoRequest(host, i)
+            reachedAddress = self.__sendIcmpEchoRequest(host, i, 3)
             if reachedAddress == hostIP:
+                # Once the host IP is reached, stop trace
                 print("Trace completed.")
                 return
 
@@ -667,7 +682,15 @@ def main():
     # icmpHelperPing.sendPing("gaia.cs.umass.edu")
 
     # icmpHelperPing.traceRoute("127.0.0.1")
+    icmpHelperPing.traceRoute("200.10.227.250")  # IP from example output
 
+    # IP in Germany
+    # icmpHelperPing.traceRoute("www.bundestag.de")
+
+    # IP in France
+    # icmpHelperPing.traceRoute("www.louvre.fr")
+
+    # icmpHelperPing.traceRoute("gaia.cs.umass.edu")
     # icmpHelperPing.traceRoute("www.google.com")
     # icmpHelperPing.traceRoute("164.151.129.20")
     # icmpHelperPing.traceRoute("122.56.99.243")
